@@ -248,7 +248,7 @@
 
 <div id="fps">-- FPS</div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<!-- Three.js 由下方多CDN回退加载器动态加载 -->
 <script>
 // ============================================================
 //  等待 Three.js 加载完成后启动游戏
@@ -287,26 +287,88 @@
 
     setProgress('检测 WebGL 支持...', 3);
 
-    // 检查 Three.js 是否已加载（静态 script 标签会同步/异步加载）
-    function waitForThree() {
-        if (typeof THREE !== 'undefined' && THREE.Scene) {
-            setProgress('Three.js 加载成功！', 15);
-            startGame();
-        } else {
-            setProgress('等待 Three.js 加载...', 5);
-            setTimeout(waitForThree, 100);
+    // ============================================================
+    //  多 CDN 回退加载器 —— 逐个尝试，失败自动切换
+    // ============================================================
+    var CDN_LIST = [
+        { url: 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js', name: 'jsdelivr (603KB)' },
+        { url: 'https://unpkg.com/three@0.128.0/build/three.min.js', name: 'unpkg (1.5MB)' },
+        { url: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', name: 'cdnjs (3.4MB)' }
+    ];
+    var cdnIndex = 0;
+    var cdnScript = null;
+    var cdnTimer = null;
+    var CDN_TIMEOUT = 10000;
+
+    function tryNextCDN() {
+        // 清理上一次的 script 和 timer
+        if (cdnScript) {
+            cdnScript.onload = null;
+            cdnScript.onerror = null;
+            if (cdnScript.parentNode) cdnScript.parentNode.removeChild(cdnScript);
+            cdnScript = null;
         }
+        if (cdnTimer) { clearTimeout(cdnTimer); cdnTimer = null; }
+
+        // 所有 CDN 都失败了
+        if (cdnIndex >= CDN_LIST.length) {
+            window._showError(
+                '⚠️ 所有 CDN 均无法连接。<br>'+
+                '<small>您的网络可能屏蔽了所有国外 CDN，请尝试：</small><br>'+
+                '<small>• 使用 VPN 或代理</small><br>'+
+                '<small>• 切换到手机热点</small><br>'+
+                '<small>• 更换浏览器</small><br><br>'+
+                '<button onclick="location.reload()" style="padding:10px 32px;font-size:15px;'+
+                'background:#e94560;color:#fff;border:none;border-radius:8px;cursor:pointer;">🔄 重新加载</button>'
+            );
+            return;
+        }
+
+        var cdn = CDN_LIST[cdnIndex];
+        var pct = 5 + cdnIndex * 4;
+        setProgress('尝试 ' + cdn.name + '... ('+(cdnIndex+1)+'/'+CDN_LIST.length+')', pct);
+        document.getElementById('loadDetail').textContent = '来源: ' + cdn.name;
+
+        cdnScript = document.createElement('script');
+        cdnScript.src = cdn.url;
+        cdnScript.async = true;
+
+        cdnScript.onload = function() {
+            if (cdnTimer) { clearTimeout(cdnTimer); cdnTimer = null; }
+            setProgress('Three.js 加载成功！', 18);
+            document.getElementById('loadDetail').textContent = '✓ ' + cdn.name + ' 已连接';
+
+            // 等待 THREE 全局变量完全就绪
+            (function check() {
+                if (typeof THREE !== 'undefined' && THREE.Scene) {
+                    try { startGame(); } catch(e) {
+                        console.error('游戏初始化失败:', e);
+                        window._showError('⚠️ 游戏初始化失败。<br><small>错误: '+e.message+'</small><br><br>'+
+                            '<button onclick="location.reload()" style="padding:10px 32px;font-size:15px;'+
+                            'background:#e94560;color:#fff;border:none;border-radius:8px;cursor:pointer;">🔄 刷新重试</button>');
+                    }
+                } else {
+                    setTimeout(check, 20);
+                }
+            })();
+        };
+
+        cdnScript.onerror = function() {
+            if (cdnTimer) { clearTimeout(cdnTimer); cdnTimer = null; }
+            cdnIndex++;
+            tryNextCDN();
+        };
+
+        // 超时保护
+        cdnTimer = setTimeout(function() {
+            cdnIndex++;
+            tryNextCDN();
+        }, CDN_TIMEOUT);
+
+        document.head.appendChild(cdnScript);
     }
 
-    // 超时处理
-    var loadTimeout = setTimeout(function() {
-        if (typeof THREE === 'undefined') {
-            window._showError('⚠️ Three.js 加载超时（603KB）。<br><small>请检查网络连接，或点击下方按钮重试。</small><br><br>'+
-                '<button onclick="location.reload()" style="padding:10px 32px;font-size:15px;background:#e94560;color:#fff;border:none;border-radius:8px;cursor:pointer;">🔄 刷新重试</button>');
-        }
-    }, 30000);
-
-    waitForThree();
+    tryNextCDN();
 
     // ============================================================
     //  游戏主函数
