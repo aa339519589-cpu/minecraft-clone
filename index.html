@@ -248,7 +248,7 @@
 
 <div id="fps">-- FPS</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script>
 // ============================================================
 //  等待 Three.js 加载完成后启动游戏
@@ -299,11 +299,12 @@
     }
 
     // 超时处理
-    setTimeout(function() {
+    var loadTimeout = setTimeout(function() {
         if (typeof THREE === 'undefined') {
-            window._showError('⚠️ Three.js 加载超时。<br><small>请检查网络连接后刷新页面。</small>');
+            window._showError('⚠️ Three.js 加载超时（603KB）。<br><small>请检查网络连接，或点击下方按钮重试。</small><br><br>'+
+                '<button onclick="location.reload()" style="padding:10px 32px;font-size:15px;background:#e94560;color:#fff;border:none;border-radius:8px;cursor:pointer;">🔄 刷新重试</button>');
         }
-    }, 15000);
+    }, 30000);
 
     waitForThree();
 
@@ -467,7 +468,7 @@
         }
 
         // ============================================================
-        //  纹理生成
+        //  纹理生成 — 改良细节纹理
         // ============================================================
         var texCache = {};
 
@@ -542,7 +543,8 @@
                                 var n=noise2D(x,y,200);
                                 var stripe=Math.sin(y*1.5+x*0.25)*0.07;
                                 var knot=(Math.abs(x-5)<1.5&&Math.abs(y-8)<1.5)?0.1:0;
-                                d[i]=clamp((0.40+n*0.10+stripe+knot)*255,0,255);
+                                var barkLine = (y%6<1)?0.02:0;
+                                d[i]=clamp((0.40+n*0.10+stripe+knot+barkLine)*255,0,255);
                                 d[i+1]=clamp((0.26+n*0.08+stripe*0.7+knot)*255,0,255);
                                 d[i+2]=clamp((0.14+n*0.06+stripe*0.5+knot*0.7)*255,0,255);
                                 d[i+3]=255;
@@ -823,19 +825,21 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.15;
+            renderer.toneMappingExposure = 1.25;
             renderer.outputColorSpace = THREE.SRGBColorSpace;
+            // 提升阴影质量
+            renderer.shadowMap.bias = 0.00002;
             document.body.prepend(renderer.domElement);
 
             // 灯光
-            var ambient = new THREE.AmbientLight(0x8899cc, 0.45);
+            var ambient = new THREE.AmbientLight(0x8899cc, 0.50);
             scene.add(ambient);
 
-            var sun = new THREE.DirectionalLight(0xfff0dd, 2.2);
+            var sun = new THREE.DirectionalLight(0xfff0dd, 2.4);
             sun.position.set(40,55,25);
             sun.castShadow = true;
-            sun.shadow.mapSize.width = 1024;
-            sun.shadow.mapSize.height = 1024;
+            sun.shadow.mapSize.width = 1536;
+            sun.shadow.mapSize.height = 1536;
             sun.shadow.camera.near = 0.5;
             sun.shadow.camera.far = 100;
             sun.shadow.camera.left = -40;
@@ -894,9 +898,10 @@
             waterTex.generateMipmaps = true;
             waterTex.colorSpace = THREE.SRGBColorSpace;
             var waterMat = new THREE.MeshPhysicalMaterial({
-                map:waterTex, color:0x3388cc, roughness:0.15, metalness:0.1,
-                transparent:true, opacity:0.78, envMapIntensity:0.5,
-                clearcoat:0.05, depthWrite:true
+                map:waterTex, color:0x3388cc, roughness:0.10, metalness:0.05,
+                transparent:true, opacity:0.72, envMapIntensity:0.6,
+                clearcoat:0.15, clearcoatRoughness:0.3, depthWrite:true,
+                side: THREE.DoubleSide
             });
             waterMesh = new THREE.Mesh(waterGeo, waterMat);
             waterMesh.rotation.x = -Math.PI/2;
@@ -1497,19 +1502,20 @@
         // ============================================================
         //  启动
         // ============================================================
-        setP('生成地形...', 30);
+        setP('生成 64×64 世界地形...', 25);
 
         // 使用 setTimeout 分步执行，避免阻塞 UI
         setTimeout(function() {
             try {
+                setP('🪨 生成地形+洞穴+矿脉...', 35);
                 generateWorld();
-                setP('地形生成完成', 60);
+                setP('🌲 地形完成 ('+W+'×'+D+'×'+H+')，80+ 树木', 55);
 
                 setTimeout(function() {
                     try {
-                        setP('构建渲染网格...', 65);
+                        setP('🔨 构建区块网格 ['+CX+'×'+CY+'×'+CZ+']...', 60);
                         buildAllChunks();
-                        setP('渲染网格完成', 90);
+                        setP('✅ 全部区块构建完成', 85);
 
                         respawnPlayer();
                         setP('就绪！', 100);
