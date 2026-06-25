@@ -248,18 +248,12 @@
 
 <div id="fps">-- FPS</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // ============================================================
-//  CDN 回退加载 Three.js
+//  等待 Three.js 加载完成后启动游戏
 // ============================================================
 (function() {
-    var CDNS = [
-        'https://unpkg.com/three@0.152.2/build/three.min.js',
-        'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js',
-        'https://fastly.jsdelivr.net/npm/three@0.152.2/build/three.min.js',
-        'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
-    ];
-
     function setProgress(msg, pct) {
         var bar = document.getElementById('loadBar');
         var detail = document.getElementById('loadDetail');
@@ -269,14 +263,14 @@
         if (text && pct >= 100) text.textContent = '✅ 准备就绪！';
     }
 
-    function showError(msg) {
+    window._showError = function(msg) {
         var errEl = document.getElementById('loadError');
         var spin = document.querySelector('.loading-spinner');
         var text = document.getElementById('loadText');
         if (errEl) { errEl.innerHTML = msg || errEl.innerHTML; errEl.classList.add('show'); }
         if (spin) spin.style.display = 'none';
         if (text) text.textContent = '❌ 加载失败';
-    }
+    };
 
     // WebGL 检测
     function hasWebGL() {
@@ -287,53 +281,37 @@
     }
 
     if (!hasWebGL()) {
-        showError('⚠️ 您的浏览器不支持 WebGL。<br><small>请使用 Chrome、Edge 或 Firefox 等现代浏览器。</small>');
+        window._showError('⚠️ 您的浏览器不支持 WebGL。<br><small>请使用 Chrome、Edge 或 Firefox 等现代浏览器。</small>');
         return;
     }
 
     setProgress('检测 WebGL 支持...', 3);
 
-    var triedIndex = 0;
-    function tryNextCDN() {
-        if (triedIndex >= CDNS.length) {
-            showError('⚠️ 所有 CDN 均无法连接。<br><small>请检查网络或使用 VPN 后刷新页面。</small>');
-            return;
-        }
-        var url = CDNS[triedIndex];
-        setProgress('尝试 CDN: ' + url.substring(8, 40) + '...', 5 + triedIndex * 2);
-
-        var script = document.createElement('script');
-        script.src = url;
-        script.onload = function() {
+    // 检查 Three.js 是否已加载（静态 script 标签会同步/异步加载）
+    function waitForThree() {
+        if (typeof THREE !== 'undefined' && THREE.Scene) {
             setProgress('Three.js 加载成功！', 15);
-            // 给浏览器一点时间完成初始化
-            setTimeout(function() {
-                if (typeof THREE !== 'undefined') {
-                    startGame();
-                } else {
-                    triedIndex++;
-                    tryNextCDN();
-                }
-            }, 50);
-        };
-        script.onerror = function() {
-            console.warn('CDN 失败: ' + url);
-            triedIndex++;
-            tryNextCDN();
-        };
-        document.head.appendChild(script);
+            startGame();
+        } else {
+            setProgress('等待 Three.js 加载...', 5);
+            setTimeout(waitForThree, 100);
+        }
     }
 
-    // 暴露给startGame使用
-    window._setProgress = setProgress;
-    window._showError = showError;
+    // 超时处理
+    setTimeout(function() {
+        if (typeof THREE === 'undefined') {
+            window._showError('⚠️ Three.js 加载超时。<br><small>请检查网络连接后刷新页面。</small>');
+        }
+    }, 15000);
 
-    tryNextCDN();
+    waitForThree();
 
-    // 游戏启动函数（Three.js 加载完成后调用）
-    window.startGame = function() {
-        var setP = window._setProgress;
-        var THREE = window.THREE;
+    // ============================================================
+    //  游戏主函数
+    // ============================================================
+    function startGame() {
+        var setP = setProgress;
         setP('初始化游戏...', 20);
 
         // ============================================================
