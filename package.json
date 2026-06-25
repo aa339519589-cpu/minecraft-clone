@@ -2,8 +2,5 @@
   "name": "minecraft-clone",
   "version": "1.0.0",
   "private": true,
-  "description": "MiniCraft - 3D Minecraft-style browser game",
-  "scripts": {
-    "test": "node -e \"console.log('All checks passed - pure static HTML game'); process.exit(0);\""
-  }
+  "description": "MiniCraft - 3D Minecraft-style browser game"
 }
