@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniCraft - 我的世界</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #1a1a2e;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            cursor: default;
+            user-select: none;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* 遮罩层 */
+        #blocker {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.4s;
+        }
+        #blocker.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #instructions {
+            text-align: center;
+            color: #fff;
+            max-width: 540px;
+            padding: 40px;
+        }
+        #instructions h1 {
+            font-size: 52px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #4ade80, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+        #instructions .subtitle {
+            font-size: 18px;
+            color: #94a3b8;
+            margin-bottom: 28px;
+        }
+        #instructions .btn-play {
+            display: inline-block;
+            padding: 14px 48px;
+            border: none;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 24px rgba(74, 222, 128, 0.35);
+            margin-bottom: 24px;
+        }
+        #instructions .btn-play:hover {
+            transform: scale(1.04);
+            box-shadow: 0 6px 32px rgba(74, 222, 128, 0.5);
+        }
+        #instructions .controls-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 24px;
+            text-align: left;
+            font-size: 14px;
+            color: #cbd5e1;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 20px 28px;
+            margin-top: 16px;
+        }
+        #instructions .controls-info kbd {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+            color: #e2e8f0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #instructions .controls-info span {
+            color: #94a3b8;
+        }
+
+        /* 准星 */
+        #crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        #crosshair.show {
+            opacity: 1;
+        }
+        #crosshair svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        /* 工具栏 */
+        #toolbar {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            display: flex;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(10px);
+            padding: 6px 10px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        #toolbar.show {
+            opacity: 1;
+        }
+        .toolbar-item {
+            width: 54px;
+            height: 54px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.15s;
+            position: relative;
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .toolbar-item .block-preview {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+        }
+        .toolbar-item .key-hint {
+            position: absolute;
+            top: 2px;
+            left: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.3);
+        }
+        .toolbar-item.active {
+            border-color: #4ade80;
+            background: rgba(74, 222, 128, 0.15);
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
+        }
+        .toolbar-item.active .key-hint {
+            color: #4ade80;
+        }
+
+        /* 方块信息 */
+        #block-info {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            color: #fff;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            padding: 8px 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            text-align: center;
+        }
+        #block-info.show {
+            opacity: 1;
+        }
+        #block-info .block-name {
+            font-weight: 600;
+        }
+        #block-info .block-coord {
+            color: #94a3b8;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        /* FPS */
+        #fps {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 50;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+            font-family: monospace;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        #fps.show {
+            opacity: 1;
+        }
+
+        /* 选中高亮框 */
+        #block-highlight {
+            position: fixed;
+            pointer-events: none;
+            z-index: 40;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 2px;
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+        #block-highlight.show {
+            opacity: 1;
+        }
+
+        /* 响应式 */
+        @media (max-width: 600px) {
+            #instructions h1 {
+                font-size: 32px;
+            }
+            #instructions .controls-info {
+                grid-template-columns: 1fr;
+                font-size: 12px;
+                padding: 14px 18px;
+            }
+            .toolbar-item {
+                width: 42px;
+                height: 42px;
+            }
+            .toolbar-item .block-preview {
+                width: 24px;
+                height: 24px;
+            }
+            #toolbar {
+                padding: 4px 8px;
+                gap: 3px;
+                bottom: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 遮罩层 -->
+    <div id="blocker">
+        <div id="instructions">
+            <h1>⚡ MiniCraft</h1>
+            <p class="subtitle">探索 · 建造 · 冒险</p>
+            <button class="btn-play" id="playBtn">▶ 进入世界</button>
+            <div class="controls-info">
+                <div><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <span>移动</span></div>
+                <div><kbd>空格</kbd> <span>跳跃</span></div>
+                <div><kbd>左键</kbd> <span>破坏方块</span></div>
+                <div><kbd>右键</kbd> <span>放置方块</span></div>
+                <div><kbd>1</kbd> – <kbd>8</kbd> <span>切换方块</span></div>
+                <div><kbd>Shift</kbd> <span>下蹲（慢走）</span></div>
+                <div><kbd>F</kbd> <span>切换全屏</span></div>
+                <div><kbd>ESC</kbd> <span>释放鼠标</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 准星 -->
+    <div id="crosshair">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="16" r="2" fill="rgba(255,255,255,0.9)"/>
+            <line x1="16" y1="4" x2="16" y2="12" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+            <line x1="16" y1="20" x2="16" y2="28" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+            <line x1="4" y1="16" x2="12" y2="16" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+            <line x1="20" y1="16" x2="28" y2="16" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+        </svg>
+    </div>
+
+    <!-- 工具栏 -->
+    <div id="toolbar"></div>
+
+    <!-- 方块信息 -->
+    <div id="block-info">
+        <span class="block-name"></span>
+        <span class="block-coord"></span>
+    </div>
+
+    <!-- FPS -->
+    <div id="fps">0 FPS</div>
+
+    <!-- 引入 Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="game.js"></script>
+</body>
+</html>
