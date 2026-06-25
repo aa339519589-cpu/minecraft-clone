@@ -11,16 +11,20 @@
             box-sizing: border-box;
         }
 
-        body {
+        html, body {
             overflow: hidden;
-            background: #1a1a2e;
+            background: #0a0a1a;
             font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
             cursor: default;
             user-select: none;
+            width: 100%;
+            height: 100%;
         }
 
         canvas {
             display: block;
+            width: 100%;
+            height: 100%;
         }
 
         /* 遮罩层 */
@@ -28,12 +32,12 @@
             position: fixed;
             inset: 0;
             z-index: 100;
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(4px);
+            background: rgba(0, 0, 0, 0.70);
+            backdrop-filter: blur(6px);
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.4s;
+            transition: opacity 0.5s ease;
         }
         #blocker.hidden {
             opacity: 0;
@@ -43,65 +47,98 @@
         #instructions {
             text-align: center;
             color: #fff;
-            max-width: 540px;
-            padding: 40px;
+            max-width: 560px;
+            padding: 48px 40px;
+            animation: fadeIn 0.6s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         #instructions h1 {
-            font-size: 52px;
+            font-size: 56px;
             font-weight: 800;
             background: linear-gradient(135deg, #4ade80, #22d3ee);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 8px;
-            letter-spacing: 2px;
+            margin-bottom: 6px;
+            letter-spacing: 3px;
+            text-shadow: none;
         }
         #instructions .subtitle {
             font-size: 18px;
             color: #94a3b8;
-            margin-bottom: 28px;
+            margin-bottom: 30px;
+            letter-spacing: 4px;
         }
         #instructions .btn-play {
             display: inline-block;
-            padding: 14px 48px;
+            padding: 16px 52px;
             border: none;
-            border-radius: 12px;
+            border-radius: 14px;
             font-size: 20px;
             font-weight: 700;
             color: #fff;
-            background: linear-gradient(135deg, #4ade80, #22c55e);
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.15s ease, box-shadow 0.2s ease;
             box-shadow: 0 4px 24px rgba(74, 222, 128, 0.35);
-            margin-bottom: 24px;
+            margin-bottom: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+        #instructions .btn-play::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
         #instructions .btn-play:hover {
-            transform: scale(1.04);
-            box-shadow: 0 6px 32px rgba(74, 222, 128, 0.5);
+            transform: scale(1.05);
+            box-shadow: 0 6px 40px rgba(74, 222, 128, 0.5);
+        }
+        #instructions .btn-play:hover::after {
+            opacity: 1;
+        }
+        #instructions .btn-play:active {
+            transform: scale(0.97);
         }
         #instructions .controls-info {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px 24px;
+            gap: 10px 28px;
             text-align: left;
             font-size: 14px;
             color: #cbd5e1;
-            background: rgba(255, 255, 255, 0.06);
-            border-radius: 12px;
-            padding: 20px 28px;
-            margin-top: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 22px 30px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
         }
         #instructions .controls-info kbd {
             display: inline-block;
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.10);
             padding: 2px 10px;
-            border-radius: 4px;
+            border-radius: 5px;
             font-size: 13px;
             font-family: inherit;
             color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            min-width: 28px;
+            text-align: center;
         }
         #instructions .controls-info span {
             color: #94a3b8;
+        }
+        #instructions .controls-info .key-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         /* 准星 */
@@ -113,32 +150,35 @@
             z-index: 50;
             pointer-events: none;
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.2s;
         }
         #crosshair.show {
             opacity: 1;
         }
         #crosshair svg {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
+            filter: drop-shadow(0 0 3px rgba(0,0,0,0.3));
         }
 
         /* 工具栏 */
         #toolbar {
             position: fixed;
-            bottom: 30px;
+            bottom: 28px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 50;
             display: flex;
             gap: 4px;
             background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             padding: 6px 10px;
-            border-radius: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translateX(-50%) translateY(0);
         }
         #toolbar.show {
             opacity: 1;
@@ -146,34 +186,41 @@
         .toolbar-item {
             width: 54px;
             height: 54px;
-            border-radius: 8px;
+            border-radius: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             border: 2px solid transparent;
-            transition: all 0.15s;
+            transition: all 0.12s ease;
             position: relative;
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .toolbar-item:hover {
+            background: rgba(255, 255, 255, 0.08);
         }
         .toolbar-item .block-preview {
             width: 32px;
             height: 32px;
             border-radius: 4px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
         }
         .toolbar-item .key-hint {
             position: absolute;
-            top: 2px;
+            top: 3px;
             left: 6px;
             font-size: 10px;
             font-weight: 700;
-            color: rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.25);
+            font-family: monospace;
         }
         .toolbar-item.active {
             border-color: #4ade80;
-            background: rgba(74, 222, 128, 0.15);
-            box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
+            background: rgba(74, 222, 128, 0.12);
+            box-shadow: 0 0 24px rgba(74, 222, 128, 0.15);
+            transform: translateY(-4px);
         }
         .toolbar-item.active .key-hint {
             color: #4ade80;
@@ -188,15 +235,19 @@
             z-index: 50;
             color: #fff;
             font-size: 14px;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.45);
             backdrop-filter: blur(8px);
-            padding: 8px 18px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 8px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.3s ease;
             pointer-events: none;
             text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         #block-info.show {
             opacity: 1;
@@ -207,24 +258,40 @@
         #block-info .block-coord {
             color: #94a3b8;
             font-size: 12px;
-            margin-left: 8px;
+            font-family: monospace;
         }
 
-        /* FPS */
+        /* FPS + 状态 */
         #fps {
             position: fixed;
             top: 16px;
             right: 16px;
             z-index: 50;
-            color: rgba(255, 255, 255, 0.4);
+            color: rgba(255, 255, 255, 0.30);
             font-size: 12px;
-            font-family: monospace;
+            font-family: 'Consolas', 'Courier New', monospace;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.3s;
+            background: rgba(0,0,0,0.20);
+            padding: 4px 10px;
+            border-radius: 6px;
         }
         #fps.show {
             opacity: 1;
+        }
+
+        /* 加载进度 */
+        #loading {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 90;
+            color: rgba(255,255,255,0.3);
+            font-size: 13px;
+            font-family: monospace;
+            letter-spacing: 2px;
         }
 
         /* 选中高亮框 */
@@ -243,13 +310,25 @@
 
         /* 响应式 */
         @media (max-width: 600px) {
+            #instructions {
+                padding: 30px 20px;
+            }
             #instructions h1 {
                 font-size: 32px;
+            }
+            #instructions .subtitle {
+                font-size: 14px;
+                margin-bottom: 20px;
+            }
+            #instructions .btn-play {
+                padding: 12px 36px;
+                font-size: 17px;
             }
             #instructions .controls-info {
                 grid-template-columns: 1fr;
                 font-size: 12px;
                 padding: 14px 18px;
+                gap: 6px;
             }
             .toolbar-item {
                 width: 42px;
@@ -263,11 +342,20 @@
                 padding: 4px 8px;
                 gap: 3px;
                 bottom: 16px;
+                border-radius: 12px;
+            }
+            #block-info {
+                font-size: 12px;
+                padding: 6px 14px;
+                top: 14px;
             }
         }
     </style>
 </head>
 <body>
+
+    <!-- 加载指示 -->
+    <div id="loading">⏳ 加载世界中...</div>
 
     <!-- 遮罩层 -->
     <div id="blocker">
@@ -276,14 +364,14 @@
             <p class="subtitle">探索 · 建造 · 冒险</p>
             <button class="btn-play" id="playBtn">▶ 进入世界</button>
             <div class="controls-info">
-                <div><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <span>移动</span></div>
-                <div><kbd>空格</kbd> <span>跳跃</span></div>
-                <div><kbd>左键</kbd> <span>破坏方块</span></div>
-                <div><kbd>右键</kbd> <span>放置方块</span></div>
-                <div><kbd>1</kbd> – <kbd>8</kbd> <span>切换方块</span></div>
-                <div><kbd>Shift</kbd> <span>下蹲（慢走）</span></div>
-                <div><kbd>F</kbd> <span>切换全屏</span></div>
-                <div><kbd>ESC</kbd> <span>释放鼠标</span></div>
+                <div class="key-group"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <span>移动</span></div>
+                <div class="key-group"><kbd>空格</kbd> <span>跳跃</span></div>
+                <div class="key-group"><kbd>左键</kbd> <span>破坏方块</span></div>
+                <div class="key-group"><kbd>右键</kbd> <span>放置方块</span></div>
+                <div class="key-group"><kbd>1</kbd>–<kbd>8</kbd> <span>切换方块</span></div>
+                <div class="key-group"><kbd>Shift</kbd> <span>慢走</span></div>
+                <div class="key-group"><kbd>F</kbd> <span>全屏</span></div>
+                <div class="key-group"><kbd>ESC</kbd> <span>释放鼠标</span></div>
             </div>
         </div>
     </div>
@@ -292,10 +380,10 @@
     <div id="crosshair">
         <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="16" cy="16" r="2" fill="rgba(255,255,255,0.9)"/>
-            <line x1="16" y1="4" x2="16" y2="12" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
-            <line x1="16" y1="20" x2="16" y2="28" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
-            <line x1="4" y1="16" x2="12" y2="16" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
-            <line x1="20" y1="16" x2="28" y2="16" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+            <line x1="16" y1="4" x2="16" y2="12" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+            <line x1="16" y1="20" x2="16" y2="28" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+            <line x1="4" y1="16" x2="12" y2="16" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+            <line x1="20" y1="16" x2="28" y2="16" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
         </svg>
     </div>
 
@@ -309,7 +397,7 @@
     </div>
 
     <!-- FPS -->
-    <div id="fps">0 FPS</div>
+    <div id="fps">-- FPS</div>
 
     <!-- 引入 Three.js -->
     <script type="importmap">
